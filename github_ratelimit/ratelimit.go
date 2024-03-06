@@ -16,13 +16,14 @@ type SecondaryRateLimitWaiter struct {
 	lock           sync.RWMutex
 	totalSleepTime time.Duration
 	config         *SecondaryRateLimitConfig
-	rateLimit      *rate.Limit
+	rateLimit      *rate.Limiter
 }
 
 func NewRateLimitWaiter(base http.RoundTripper, opts ...Option) (*SecondaryRateLimitWaiter, error) {
 	if base == nil {
 		base = http.DefaultTransport
 	}
+
 
 	waiter := SecondaryRateLimitWaiter{
 		rateLimit: rate.NewLimiter(rate.Every(1*time.Hour), 5000),
