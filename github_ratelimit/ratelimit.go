@@ -1,10 +1,13 @@
 package github_ratelimit
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type SecondaryRateLimitWaiter struct {
@@ -13,6 +16,7 @@ type SecondaryRateLimitWaiter struct {
 	lock           sync.RWMutex
 	totalSleepTime time.Duration
 	config         *SecondaryRateLimitConfig
+	rateLimit      *rate.Limit
 }
 
 func NewRateLimitWaiter(base http.RoundTripper, opts ...Option) (*SecondaryRateLimitWaiter, error) {
@@ -21,8 +25,9 @@ func NewRateLimitWaiter(base http.RoundTripper, opts ...Option) (*SecondaryRateL
 	}
 
 	waiter := SecondaryRateLimitWaiter{
-		Base:   base,
-		config: newConfig(opts...),
+		rateLimit: rate.NewLimiter(rate.Every(1*time.Hour), 5000),
+		Base:      base,
+		config:    newConfig(opts...),
 	}
 
 	return &waiter, nil
@@ -48,6 +53,12 @@ func NewRateLimitWaiterClient(base http.RoundTripper, opts ...Option) (*http.Cli
 // after a retry-after response is received and before it is processed,
 // a few other (concurrent) requests may be issued.
 func (t *SecondaryRateLimitWaiter) RoundTrip(request *http.Request) (*http.Response, error) {
+	ctx := context.Background()
+	err := t.rateLimit.Wait(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	t.waitForRateLimit()
 
 	resp, err := t.Base.RoundTrip(request)
