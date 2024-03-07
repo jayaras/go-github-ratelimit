@@ -26,7 +26,7 @@ func NewRateLimitWaiter(base http.RoundTripper, opts ...Option) (*SecondaryRateL
 
 
 	waiter := SecondaryRateLimitWaiter{
-		rateLimit: rate.NewLimiter(rate.Every(1*time.Hour), 5000),
+		rateLimit: rate.NewLimiter(rate.Every(76*time.Millisecond * 100), 3),
 		Base:      base,
 		config:    newConfig(opts...),
 	}
